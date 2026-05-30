@@ -1,0 +1,74 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+*.so
+.venv/
+venv/
+env/
+*.whl
+
+# ===== Environment =====
+.env
+.env.local
+.env.production
+.env.*.local
+
+# ===== Node.js / Frontend =====
+node_modules/
+frontend/dist/
+frontend/build/
+*.tsbuildinfo
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== OSM / GraphHopper Data =====
+*.osm.pbf
+*.osm.pbf.md5
+graph-cache/
+data/
+backend/graphhopper-data/
+
+# ===== Docker =====
+docker-compose.override.yml
+postgres-data/
+pgadmin-data/
+
+# ===== Database =====
+*.sqlite3
+*.db
+
+# ===== OS =====
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# ===== Logs =====
+*.log
+logs/
+
+# ===== Coverage / Test =====
+.coverage
+htmlcov/
+.coverage.*
+.nyc_output/
+coverage/
+playwright-report/
+test-results/
+
+# ===== Misc =====
+*.tmp
+*.bak
+.cache/
+
+# personal
+NOTES.md
+GRAPHHOPPER_SETUP.md
