@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
-import { useRouteStore } from '../stores/routeStore';
-import { useElevation } from '../hooks/useElevation';
-import { AIAssistantPanel } from './AIAssistantPanel';
 import { nearestPointOnLine, length, lineSlice, point } from '@turf/turf';
 import type { Feature, LineString } from 'geojson';
+import { useRouteStore } from '../stores/routeStore';
+import { useElevation } from '../hooks/useElevation';
+import { useSplitMarkerStore } from '../stores/splitMarkerStore';
+import { AIAssistantPanel } from './AIAssistantPanel';
 
 export default function RouteInfoPanel() {
   const {
@@ -21,7 +22,15 @@ export default function RouteInfoPanel() {
     removeWaypoint,
   } = useRouteStore();
 
-  // Hitung jarak kumulatif per waypoint dari polyline rute
+  const {
+    enabled: splitEnabled,
+    unit: splitUnit,
+    interval: splitInterval,
+    setEnabled: setSplitEnabled,
+    setUnit: setSplitUnit,
+    setInterval: setSplitInterval,
+  } = useSplitMarkerStore();
+
   const cumulativeDistances = useMemo(() => {
     if (segments.length === 0 || waypoints.length < 2) {
       return waypoints.map(() => 0);
@@ -58,6 +67,12 @@ export default function RouteInfoPanel() {
   const formatDistance = (meters: number) => {
     if (meters === 0) return '--';
     return `${(meters / 1000).toFixed(2)} km`;
+  };
+
+  const formatPace = (pace: number) => {
+    const minutes = Math.floor(pace);
+    const seconds = Math.round((pace - minutes) * 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')} /km`;
   };
 
   const calculateEstimatedTime = (meters: number) => {
@@ -100,80 +115,145 @@ export default function RouteInfoPanel() {
     };
   };
 
+  const routeTip = waypoints.length === 0
+    ? 'Klik peta untuk mulai membuat rute.'
+    : 'Drag marker untuk pindah titik, klik kanan marker untuk hapus.';
+
   return (
-    <div className="flex h-full w-full flex-col border-r border-outline-variant/40 bg-[rgba(255,255,255,0.82)] shadow-[18px_0_42px_rgba(23,27,41,0.08)] backdrop-blur-xl">
-      <div className="px-6 pb-3 pt-5">
-        <h1 className="text-[24px] font-extrabold leading-7 tracking-normal text-on-surface">
+    <div className="flex h-full w-full flex-col border-r border-outline-variant/40 bg-[rgba(250,252,255,0.9)] shadow-[18px_0_42px_rgba(23,27,41,0.08)] backdrop-blur-xl">
+      <div className="px-5 pb-2 pt-5">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-primary-container">
+          Route builder
+        </p>
+        <h1 className="mt-1 text-[24px] font-extrabold leading-7 tracking-normal text-on-surface">
           Route Details
         </h1>
       </div>
 
-      <div className="space-y-3 px-6">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-outline-variant/45 bg-surface-container/70 p-3 shadow-[0_10px_24px_rgba(0,80,203,0.06)]">
-            <div className="mb-2 flex items-center gap-2 text-on-surface">
-              <svg className="h-5 w-5 text-primary-container" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M7 18c-1.7 0-3-1.3-3-3s1.3-3 3-3h10a3 3 0 1 0 0-6H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                <path d="M7 21v-6M17 9V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              <p className="text-sm font-semibold">Distance</p>
+      <div className="space-y-3 px-5">
+        <div className="rounded-xl border border-outline-variant/45 bg-white/86 p-3 shadow-[0_10px_28px_rgba(23,27,41,0.06)]">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg bg-primary-container px-3 py-3 text-white">
+              <div className="mb-2 flex items-center gap-2 text-white/80">
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M7 18c-1.7 0-3-1.3-3-3s1.3-3 3-3h10a3 3 0 1 0 0-6H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M7 21v-6M17 9V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                <p className="text-[11px] font-bold uppercase tracking-[0.08em]">Distance</p>
+              </div>
+              <p className="text-[24px] font-extrabold leading-7 tracking-normal">
+                {isCalculating ? <span className="animate-pulse">...</span> : formatDistance(totalDistance)}
+              </p>
             </div>
-            <p className="text-[25px] font-extrabold leading-8 tracking-normal text-primary-container">
-              {isCalculating ? <span className="animate-pulse">...</span> : formatDistance(totalDistance)}
-            </p>
+
+            <div className="rounded-lg bg-surface-container-low px-3 py-3">
+              <div className="mb-2 flex items-center gap-2 text-primary-container">
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" />
+                  <path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                <p className="text-[11px] font-bold uppercase tracking-[0.08em]">Est. time</p>
+              </div>
+              <p className="text-[24px] font-extrabold leading-7 tracking-normal text-primary-container">
+                {isCalculating ? <span className="animate-pulse">...</span> : calculateEstimatedTime(totalDistance)}
+              </p>
+            </div>
           </div>
 
-          <div className="rounded-xl border border-primary-container/25 bg-primary-fixed/70 p-3 shadow-[0_10px_24px_rgba(0,80,203,0.08)]">
-            <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary-container">
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" />
-                <path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <div className="mt-3 grid grid-cols-[1fr_104px] gap-2">
+            <label className="flex min-w-0 items-center gap-2 rounded-lg border border-outline-variant/45 bg-surface-container-low/75 px-3 py-2">
+              <svg className="h-4 w-4 shrink-0 text-primary-container" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              Est. Time
-            </p>
-            <p className="text-[25px] font-extrabold leading-8 tracking-normal text-primary-container">
-              {isCalculating ? <span className="animate-pulse">...</span> : calculateEstimatedTime(totalDistance)}
-            </p>
-          </div>
-        </div>
+              <span className="sr-only">Running pace per kilometer</span>
+              <select
+                value={paceMinPerKm}
+                onChange={(e) => setPaceMinPerKm(Number(e.target.value))}
+                className="min-w-0 flex-1 bg-transparent text-sm font-bold text-on-surface outline-none"
+                aria-label="Running pace per kilometer"
+              >
+                <option value={4}>4:00 /km</option>
+                <option value={4.5}>4:30 /km</option>
+                <option value={5}>5:00 /km</option>
+                <option value={5.5}>5:30 /km</option>
+                <option value={6}>6:00 /km</option>
+                <option value={6.5}>6:30 /km</option>
+                <option value={7}>7:00 /km</option>
+                <option value={7.5}>7:30 /km</option>
+                <option value={8}>8:00 /km</option>
+                <option value={9}>9:00 /km</option>
+                <option value={10}>10:00 /km</option>
+              </select>
+            </label>
 
-        <div className="rounded-xl border border-outline-variant/45 bg-surface-container/70 p-3 shadow-[0_10px_24px_rgba(0,80,203,0.04)]">
-          <div className="mb-2 flex items-center gap-2 text-on-surface">
-            <svg className="h-5 w-5 text-primary-container" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <p className="text-sm font-semibold">Pace</p>
+            <div className="rounded-lg border border-outline-variant/35 bg-white/70 px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-on-surface-variant">Points</p>
+              <p className="text-sm font-extrabold text-on-surface">{waypoints.length}</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <select
-              value={paceMinPerKm}
-              onChange={(e) => setPaceMinPerKm(Number(e.target.value))}
-              className="flex-1 rounded-lg border border-outline-variant/50 bg-white/80 px-3 py-2 text-sm font-semibold text-on-surface shadow-sm transition-colors focus:border-primary-container focus:outline-none focus:ring-1 focus:ring-primary-container"
-              aria-label="Running pace per kilometer"
-            >
-              <option value={4}>4:00 /km</option>
-              <option value={4.5}>4:30 /km</option>
-              <option value={5}>5:00 /km</option>
-              <option value={5.5}>5:30 /km</option>
-              <option value={6}>6:00 /km</option>
-              <option value={6.5}>6:30 /km</option>
-              <option value={7}>7:00 /km</option>
-              <option value={7.5}>7:30 /km</option>
-              <option value={8}>8:00 /km</option>
-              <option value={9}>9:00 /km</option>
-              <option value={10}>10:00 /km</option>
-            </select>
-            <span className="whitespace-nowrap text-xs text-on-surface-variant">min/km</span>
+
+          <div className="mt-3 rounded-lg border border-outline-variant/35 bg-surface-container-low/70 px-3 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={splitEnabled}
+                  onChange={(e) => setSplitEnabled(e.target.checked)}
+                  className="h-4 w-4 shrink-0 cursor-pointer accent-primary-container"
+                  aria-label="Tampilkan split markers di peta"
+                />
+                <span className="flex min-w-0 items-center gap-1.5 text-on-surface">
+                  <svg className="h-4 w-4 shrink-0 text-primary-container" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M4 12h16M8 8v8M12 6v12M16 8v8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  <span className="text-[11px] font-bold uppercase tracking-[0.08em]">Split markers</span>
+                </span>
+              </label>
+
+              <div className={`flex shrink-0 items-center gap-1 transition-opacity ${splitEnabled ? 'opacity-100' : 'pointer-events-none opacity-40'}`}>
+                <select
+                  value={splitInterval}
+                  onChange={(e) => setSplitInterval(Number(e.target.value) as 1 | 2 | 5)}
+                  className="h-7 cursor-pointer rounded-md border border-outline-variant/45 bg-white/80 px-1.5 text-[11px] font-bold text-on-surface outline-none focus:border-primary-container"
+                  aria-label="Jarak antar marker"
+                  disabled={!splitEnabled}
+                >
+                  <option value={1}>1</option>
+                  <option value={2}>2</option>
+                  <option value={5}>5</option>
+                </select>
+                <div className="flex h-7 overflow-hidden rounded-md border border-outline-variant/45 bg-white/80 text-[11px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setSplitUnit('km')}
+                    className={`px-2 transition-colors ${splitUnit === 'km' ? 'bg-primary-container text-white' : 'text-on-surface-variant hover:bg-surface-container-low'}`}
+                    disabled={!splitEnabled}
+                    aria-label="Gunakan kilometer"
+                  >
+                    km
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSplitUnit('mi')}
+                    className={`px-2 transition-colors ${splitUnit === 'mi' ? 'bg-primary-container text-white' : 'text-on-surface-variant hover:bg-surface-container-low'}`}
+                    disabled={!splitEnabled}
+                    aria-label="Gunakan mil"
+                  >
+                    mi
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="px-6 py-6">
+      <div className="px-5 py-4">
         <div className="grid grid-cols-3 gap-2">
           <button
             onClick={undo}
             disabled={!canUndo()}
-            className="flex items-center justify-center gap-2 rounded-xl border border-outline-variant/45 bg-surface-container-low px-3 py-3 text-[15px] font-semibold text-on-surface shadow-sm transition-all hover:-translate-y-0.5 hover:bg-surface-container disabled:translate-y-0 disabled:opacity-40"
+            className="flex h-11 items-center justify-center gap-2 rounded-lg border border-outline-variant/45 bg-white/82 px-3 text-sm font-bold text-on-surface shadow-sm transition-all hover:-translate-y-0.5 hover:bg-surface-container-low disabled:translate-y-0 disabled:opacity-40"
             title="Undo (Ctrl+Z)"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -185,7 +265,7 @@ export default function RouteInfoPanel() {
           <button
             onClick={redo}
             disabled={!canRedo()}
-            className="flex items-center justify-center gap-2 rounded-xl border border-outline-variant/45 bg-surface-container-low px-3 py-3 text-[15px] font-semibold text-on-surface shadow-sm transition-all hover:-translate-y-0.5 hover:bg-surface-container disabled:translate-y-0 disabled:opacity-40"
+            className="flex h-11 items-center justify-center gap-2 rounded-lg border border-outline-variant/45 bg-white/82 px-3 text-sm font-bold text-on-surface shadow-sm transition-all hover:-translate-y-0.5 hover:bg-surface-container-low disabled:translate-y-0 disabled:opacity-40"
             title="Redo (Ctrl+Shift+Z)"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -197,7 +277,7 @@ export default function RouteInfoPanel() {
           <button
             onClick={handleClearAll}
             disabled={waypoints.length === 0}
-            className="flex items-center justify-center gap-2 rounded-xl border border-error-container bg-error-container px-3 py-3 text-[15px] font-semibold text-on-error-container shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#ffc8c2] disabled:translate-y-0 disabled:opacity-40"
+            className="flex h-11 items-center justify-center gap-2 rounded-lg border border-error-container bg-error-container px-3 text-sm font-bold text-on-error-container shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#ffc8c2] disabled:translate-y-0 disabled:opacity-40"
             title="Clear All (Esc)"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -210,52 +290,61 @@ export default function RouteInfoPanel() {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-label-lg uppercase tracking-[0.08em] text-on-surface">Waypoints</h2>
-          <span className="text-sm font-medium text-on-surface-variant">Drag to reorder</span>
+          <h2 className="text-[12px] font-extrabold uppercase tracking-[0.12em] text-on-surface">Waypoints</h2>
+          <span className="text-xs font-semibold text-on-surface-variant">
+            {waypoints.length > 0 ? `${waypoints.length} titik` : 'Belum ada titik'}
+          </span>
         </div>
 
         {waypoints.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-outline-variant/70 bg-surface-container-low/65 px-6 py-12 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-surface-container text-on-surface-variant">
+          <div className="rounded-xl border border-dashed border-outline-variant/70 bg-white/70 px-5 py-9 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-surface-container text-on-surface-variant">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor" />
               </svg>
             </div>
-            <p className="text-body-sm text-on-surface-variant">Klik di peta untuk menambah waypoint</p>
+            <p className="text-sm font-semibold text-on-surface">Mulai dari peta</p>
+            <p className="mt-1 text-xs leading-5 text-on-surface-variant">Klik lokasi start, lalu tambah titik berikutnya untuk membentuk rute.</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {waypoints.map((waypoint, index) => {
               const { label, title, bgColor, borderColor } = getWaypointMeta(index);
 
               return (
                 <div
                   key={waypoint.id}
-                  className={`group flex items-center gap-4 rounded-xl border border-outline-variant/35 border-l-4 bg-white/86 p-4 shadow-[0_8px_22px_rgba(23,27,41,0.07)] transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_12px_26px_rgba(23,27,41,0.1)] ${borderColor}`}
+                  className={`group flex min-h-[58px] items-center gap-3 rounded-lg border border-outline-variant/35 border-l-4 bg-white/86 px-3 py-2 shadow-[0_6px_18px_rgba(23,27,41,0.05)] transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_10px_22px_rgba(23,27,41,0.09)] ${borderColor}`}
                 >
                   <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-label-lg font-bold text-on-primary shadow-sm ${bgColor}`}
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-extrabold text-on-primary shadow-sm ${bgColor}`}
                   >
                     {label}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="mb-1 text-xs font-extrabold uppercase tracking-normal text-on-surface">
+                    <p className="truncate text-[11px] font-extrabold uppercase tracking-[0.04em] text-on-surface">
                       {title}
                     </p>
-                    <p className="truncate font-mono text-[15px] text-on-surface-variant">
+                    <p className="truncate font-mono text-[12px] font-semibold text-on-surface-variant">
                       {cumulativeDistances[index] !== undefined
                         ? `KM ${(cumulativeDistances[index] / 1000).toFixed(1)}`
                         : 'KM --'}
                     </p>
                   </div>
+                  <span className="hidden rounded-full bg-surface-container-low px-2 py-1 text-[10px] font-bold text-on-surface-variant group-hover:inline-block">
+                    {formatPace(paceMinPerKm)}
+                  </span>
                   <button
                     onClick={() => removeWaypoint(waypoint.id)}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xl font-bold leading-none text-error opacity-70 transition-all hover:bg-error-container hover:opacity-100"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-error opacity-70 transition-all hover:bg-error-container hover:opacity-100"
                     title="Hapus waypoint"
+                    aria-label="Hapus waypoint"
                   >
-                    x
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
                   </button>
                 </div>
               );
@@ -271,9 +360,9 @@ export default function RouteInfoPanel() {
         elevationStatus={elevationData?.elevationStatus || 'valid'}
       />
 
-      <div className="border-t border-outline-variant/35 bg-surface-container-low/80 p-6">
-        <p className="text-sm leading-relaxed text-on-surface-variant">
-          <strong className="font-bold text-on-surface">Tips:</strong> Klik peta untuk tambah waypoint, drag marker untuk pindah, klik kanan marker untuk hapus.
+      <div className="border-t border-outline-variant/35 bg-white/66 px-5 py-4">
+        <p className="text-xs leading-5 text-on-surface-variant">
+          <strong className="font-bold text-on-surface">Tips:</strong> {routeTip}
         </p>
       </div>
     </div>

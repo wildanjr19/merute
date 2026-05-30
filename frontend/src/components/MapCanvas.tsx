@@ -6,6 +6,7 @@ import { useRouteStore } from '../stores/routeStore';
 import { useRouteCalculate } from '../hooks/useRouteCalculate';
 import { RouteLayer } from './RouteLayer';
 import { HydrationMarkerLayer } from './HydrationMarkerLayer';
+import { SplitMarkerLayer } from './SplitMarkerLayer';
 import type { Waypoint } from '../types';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -15,6 +16,9 @@ const MAP_STYLES = {
   satellite: `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/512/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`,
   outdoor: `https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/tiles/512/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`,
 };
+
+// Overlay layers that should swallow map clicks (so clicking them never adds a waypoint).
+const OVERLAY_LAYER_IDS = ['split-markers-dot', 'hydration-markers'];
 
 const getMarkerMeta = (index: number, total: number) => {
   if (index === 0) {
@@ -86,8 +90,14 @@ export default function MapCanvas() {
         console.error('Map error:', e);
       });
 
-      // Click to add waypoint
+      // Click to add waypoint (skip if click landed on an overlay layer)
       map.current.on('click', (e) => {
+        const presentLayers = OVERLAY_LAYER_IDS.filter((id) => map.current?.getLayer(id));
+        if (presentLayers.length > 0) {
+          const hits = map.current!.queryRenderedFeatures(e.point, { layers: presentLayers });
+          if (hits.length > 0) return;
+        }
+
         const newWaypoint: Waypoint = {
           id: `wp-${Date.now()}`,
           lat: e.lngLat.lat,
@@ -272,6 +282,7 @@ export default function MapCanvas() {
       )}
       {/* Render route layer */}
       <RouteLayer map={mapInstance} />
+      <SplitMarkerLayer map={mapInstance} />
       <HydrationMarkerLayer map={mapInstance} />
     </div>
   );

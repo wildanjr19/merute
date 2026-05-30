@@ -107,7 +107,7 @@ export interface RouteTextRequest {
     elevationPoints: ElevationPoint[];
     elevationStatus: 'valid' | 'degraded';
   };
-  segments: any[];
+  segments: unknown[];
   options: {
     paceSecondsPerKm: number;
     language: 'id' | 'en';

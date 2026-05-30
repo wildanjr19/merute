@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import type { RouteCalculateRequest, RouteCalculateResponse, HydrationRequest, HydrationResponse, RouteTextRequest, RouteTextResponse } from '../types/index.js';
+import type { ElevationResponse, RouteCalculateRequest, RouteCalculateResponse, HydrationRequest, HydrationResponse, RouteTextRequest, RouteTextResponse } from '../types/index.js';
 
 // Base API configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -67,7 +67,7 @@ export const api = {
   },
 
   // Get elevation data
-  getElevation: async (polyline: GeoJSON.LineString): Promise<any> => {
+  getElevation: async (polyline: GeoJSON.LineString): Promise<ElevationResponse> => {
     const response = await apiClient.post('/api/routes/elevation', { polyline });
     return response.data;
   },

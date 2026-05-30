@@ -1,52 +1,45 @@
-import { useEffect, useRef } from 'react';
-import { useRouteStore } from '../stores/routeStore';
-import { api } from '../services/api';
+import { useCallback, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { distance } from '@turf/turf';
+import { useRouteStore } from '../stores/routeStore';
+import { api } from '../services/api';
+
+const isCanceledRequest = (error: unknown) => {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return true;
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    const maybeCanceled = error as { code?: string; name?: string };
+    return maybeCanceled.code === 'ERR_CANCELED' || maybeCanceled.name === 'AbortError';
+  }
+
+  return false;
+};
 
 /**
  * Hook untuk menghitung rute menggunakan GraphHopper API
- * dengan debounce 500ms untuk mengurangi spam request
+ * dengan debounce 500ms untuk mengurangi spam request.
  */
 export const useRouteCalculate = () => {
   const { waypoints, setSegments, setIsCalculating } = useRouteStore();
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    // Clear previous debounce timer
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
+  const calculateFallbackDistance = useCallback((): number => {
+    let totalDistance = 0;
+
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      const from = [waypoints[i].lng, waypoints[i].lat];
+      const to = [waypoints[i + 1].lng, waypoints[i + 1].lat];
+      const dist = distance(from, to, { units: 'kilometers' }) * 1000;
+      totalDistance += dist;
     }
 
-    // Abort previous request if still running
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    // Need at least 2 waypoints to calculate route
-    if (waypoints.length < 2) {
-      setSegments([], 0);
-      setIsCalculating(false);
-      return;
-    }
-
-    // Debounce: wait 500ms before making API call
-    debounceTimerRef.current = setTimeout(() => {
-      calculateRoute();
-    }, 500);
-
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
+    return totalDistance;
   }, [waypoints]);
 
-  const calculateRoute = async () => {
+  const calculateRoute = useCallback(async () => {
     setIsCalculating(true);
     abortControllerRef.current = new AbortController();
 
@@ -57,16 +50,14 @@ export const useRouteCalculate = () => {
 
       setSegments(response.segments, response.totalDistance);
       setIsCalculating(false);
-    } catch (error: any) {
-      // Don't show error if request was aborted (user is still editing)
-      if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+    } catch (error: unknown) {
+      if (isCanceledRequest(error)) {
         return;
       }
 
       console.error('Route calculation failed:', error);
       setIsCalculating(false);
 
-      // Fallback: calculate straight line distance using turf
       const fallbackDistance = calculateFallbackDistance();
       setSegments([], fallbackDistance);
 
@@ -74,23 +65,34 @@ export const useRouteCalculate = () => {
         duration: 3000,
       });
     }
-  };
+  }, [calculateFallbackDistance, setIsCalculating, setSegments, waypoints]);
 
-  /**
-   * Fallback calculation using straight line distance between waypoints
-   */
-  const calculateFallbackDistance = (): number => {
-    let totalDistance = 0;
-
-    for (let i = 0; i < waypoints.length - 1; i++) {
-      const from = [waypoints[i].lng, waypoints[i].lat];
-      const to = [waypoints[i + 1].lng, waypoints[i + 1].lat];
-      
-      // Calculate distance in kilometers, convert to meters
-      const dist = distance(from, to, { units: 'kilometers' }) * 1000;
-      totalDistance += dist;
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
 
-    return totalDistance;
-  };
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    if (waypoints.length < 2) {
+      setSegments([], 0);
+      setIsCalculating(false);
+      return;
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      void calculateRoute();
+    }, 500);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [calculateRoute, setIsCalculating, setSegments, waypoints]);
 };

@@ -1,4 +1,5 @@
-﻿import toast from 'react-hot-toast';
+import axios from 'axios';
+import toast from 'react-hot-toast';
 import { useRouteStore } from '../stores/routeStore';
 import { useAIStore } from '../stores/aiStore';
 import { api } from '../services/api';
@@ -10,6 +11,14 @@ interface UseAIAssistantProps {
   elevationLoss: number;
   elevationStatus: 'valid' | 'degraded';
 }
+
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  if (axios.isAxiosError<{ detail?: string }>(error)) {
+    return error.response?.data?.detail || fallback;
+  }
+
+  return fallback;
+};
 
 export function useAIAssistant({ elevationPoints, elevationGain, elevationLoss, elevationStatus }: UseAIAssistantProps) {
   const { segments, totalDistance } = useRouteStore();
@@ -59,8 +68,8 @@ export function useAIAssistant({ elevationPoints, elevationGain, elevationLoss, 
       });
       setHydrationResult(result);
       toast.success(`${result.points.length} titik hidrasi direkomendasikan`);
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail || 'Gagal generate rekomendasi hidrasi';
+    } catch (err: unknown) {
+      const msg = getApiErrorMessage(err, 'Gagal generate rekomendasi hidrasi');
       setError(msg);
       toast.error(msg);
     } finally {
@@ -101,8 +110,8 @@ export function useAIAssistant({ elevationPoints, elevationGain, elevationLoss, 
       });
       setRouteTextResult(result);
       toast.success('Cue sheet berhasil di-generate');
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail || 'Gagal generate route text';
+    } catch (err: unknown) {
+      const msg = getApiErrorMessage(err, 'Gagal generate route text');
       setError(msg);
       toast.error(msg);
     } finally {
