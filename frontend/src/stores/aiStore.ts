@@ -1,0 +1,85 @@
+import { create } from 'zustand';
+import type { HydrationPoint, HydrationResponse, RouteTextResponse } from '../types';
+
+interface AIState {
+  // Hydration
+  hydrationSuggestions: HydrationPoint[];
+  hydrationSummary: string;
+  hydrationSource: 'ai' | 'rules' | 'hybrid' | null;
+  hydrationWarnings: string[];
+
+  // Route Text
+  routeText: RouteTextResponse | null;
+
+  // UI State
+  isGeneratingHydration: boolean;
+  isGeneratingRouteText: boolean;
+  error: string | null;
+  activeTab: 'hydration' | 'routetext';
+}
+
+interface AIActions {
+  setHydrationResult: (result: HydrationResponse) => void;
+  setRouteTextResult: (result: RouteTextResponse) => void;
+  setIsGeneratingHydration: (val: boolean) => void;
+  setIsGeneratingRouteText: (val: boolean) => void;
+  setError: (error: string | null) => void;
+  setActiveTab: (tab: 'hydration' | 'routetext') => void;
+  clearHydration: () => void;
+  clearRouteText: () => void;
+  clearAll: () => void;
+}
+
+type AIStore = AIState & AIActions;
+
+export const useAIStore = create<AIStore>((set) => ({
+  hydrationSuggestions: [],
+  hydrationSummary: '',
+  hydrationSource: null,
+  hydrationWarnings: [],
+  routeText: null,
+  isGeneratingHydration: false,
+  isGeneratingRouteText: false,
+  error: null,
+  activeTab: 'hydration',
+
+  setHydrationResult: (result) =>
+    set({
+      hydrationSuggestions: result.points,
+      hydrationSummary: result.summary,
+      hydrationSource: result.source,
+      hydrationWarnings: result.warnings,
+      error: null,
+    }),
+
+  setRouteTextResult: (result) =>
+    set({
+      routeText: result,
+      error: null,
+    }),
+
+  setIsGeneratingHydration: (val) => set({ isGeneratingHydration: val }),
+  setIsGeneratingRouteText: (val) => set({ isGeneratingRouteText: val }),
+  setError: (error) => set({ error }),
+  setActiveTab: (tab) => set({ activeTab: tab }),
+
+  clearHydration: () =>
+    set({
+      hydrationSuggestions: [],
+      hydrationSummary: '',
+      hydrationSource: null,
+      hydrationWarnings: [],
+    }),
+
+  clearRouteText: () => set({ routeText: null }),
+
+  clearAll: () =>
+    set({
+      hydrationSuggestions: [],
+      hydrationSummary: '',
+      hydrationSource: null,
+      hydrationWarnings: [],
+      routeText: null,
+      error: null,
+    }),
+}));
