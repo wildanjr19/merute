@@ -45,11 +45,14 @@ jobs:
             echo "==> Rebuild backend + graphhopper"
             docker compose -f "$COMPOSE_FILE" up -d --build
 
-            echo "==> Build frontend"
-            cd "$PROJECT_DIR/frontend"
-            # Butuh Node.js terpasang di VPS dan frontend/.env berisi VITE_MAPBOX_TOKEN.
-            npm ci
-            npm run build
+            echo "==> Build frontend (di dalam container Node, tanpa perlu npm di host)"
+            # Pakai image node resmi: tidak bergantung pada PATH/nvm host.
+            # frontend/.env (berisi VITE_MAPBOX_TOKEN) dibaca otomatis oleh Vite saat build.
+            docker run --rm \
+              -v "$PROJECT_DIR/frontend:/app" \
+              -w /app \
+              node:20-slim \
+              sh -c "npm ci && npm run build"
 
             echo "==> Salin hasil build ke web root"
             # --delete membersihkan file lama yang sudah tidak ada di build baru.
