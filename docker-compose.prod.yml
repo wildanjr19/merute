@@ -1,0 +1,70 @@
+# Konfigurasi PRODUKSI MeRute.
+# Jalankan di VPS: docker compose -f docker-compose.prod.yml up -d --build
+#
+# Arsitektur (single-domain di belakang reverse proxy 1Panel/OpenResty):
+#   merute.my.id/            -> static frontend (dist/), disajikan OpenResty
+#   merute.my.id/api, /health-> backend (127.0.0.1:8001) via reverse proxy
+#   graphhopper              -> INTERNAL saja, tidak diekspos ke internet
+#
+# Catatan:
+# - Frontend TIDAK dijalankan sebagai container di sini; cukup deploy isi dist/
+#   ke web root 1Panel. Lihat DEPLOY.md.
+# - Backend hanya bind ke 127.0.0.1 agar tidak bisa diakses langsung dari publik.
+# - GraphHopper tanpa "ports" -> hanya terjangkau lewat network internal.
+
+services:
+  graphhopper:
+    build:
+      context: ./graphhopper
+      dockerfile: Dockerfile
+    image: merute-graphhopper:prod
+    container_name: merute-graphhopper
+    environment:
+      - OSM_FILE=/gh/data/surakarta.osm.pbf
+      - JAVA_OPTS=-Xmx2g -Xms1g
+    volumes:
+      # Upload file OSM ke ./data/graphhopper/surakarta.osm.pbf di VPS.
+      - ./data/graphhopper:/gh/data:ro
+      # Persist hasil build graph & log antar-restart.
+      - graphhopper-cache:/gh/graph-cache
+      - graphhopper-logs:/gh/logs
+    restart: unless-stopped
+    networks:
+      - merute-network
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8989/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 180s
+
+  backend:
+    build:
+      # Context = ROOT proyek karena requirements.txt ada di root.
+      context: .
+      dockerfile: backend/Dockerfile
+    image: merute-backend:prod
+    container_name: merute-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      - RELOAD=false
+      - WORKERS=2
+      - GRAPHHOPPER_URL=http://graphhopper:8989
+    ports:
+      # Hanya localhost VPS; reverse proxy 1Panel yang meneruskan ke sini.
+      - "127.0.0.1:8001:8001"
+    depends_on:
+      graphhopper:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - merute-network
+
+networks:
+  merute-network:
+    driver: bridge
+
+volumes:
+  graphhopper-cache:
+  graphhopper-logs:

@@ -1,8 +1,11 @@
 import axios, { AxiosError } from 'axios';
 import type { ElevationResponse, RouteCalculateRequest, RouteCalculateResponse, HydrationRequest, HydrationResponse, RouteTextRequest, RouteTextResponse } from '../types/index.js';
 
-// Base API configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Base API configuration.
+// Default kosong = same-origin: request memakai path relatif (/api, /health),
+// sehingga build yang sama jalan di lokal (via Vite proxy) maupun produksi
+// (via reverse proxy OpenResty/1Panel). Override hanya jika backend beda origin.
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 
 // Create axios instance with default config
 const apiClient = axios.create({

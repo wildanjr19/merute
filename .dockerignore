@@ -1,0 +1,46 @@
+# Build context = root proyek (untuk backend/Dockerfile).
+# Kecualikan apa pun yang tidak diperlukan image backend agar build cepat & ramping.
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+*.so
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / frontend (tidak dibutuhkan image backend)
+frontend/
+node_modules/
+
+# Routing engine & data besar
+graphhopper/
+data/
+graph-cache/
+*.osm.pbf
+*.osm.pbf.md5
+
+# Git & IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+.kilo/
+.agents/
+
+# Env & rahasia (jangan ikut ke image)
+.env
+.env.*
+backend/.env
+backend/.env.*
+
+# Docs & lain-lain
+*.md
+design/
+logs/
+*.log

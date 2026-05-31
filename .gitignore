@@ -75,4 +75,6 @@ GRAPHHOPPER_SETUP.md
 design/
 CODING_GUIDE.md
 GUIDE.md
-docker-compose.yml
+graphhopper-config.yml
+.kilo/
+.agents/
