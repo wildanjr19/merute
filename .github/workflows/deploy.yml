@@ -1,0 +1,60 @@
+name: Deploy to VPS
+
+# Otomatis deploy saat push ke main. Bisa juga dijalankan manual dari tab Actions.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Cegah dua deploy jalan bersamaan (push beruntun): yang baru membatalkan yang lama.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH ke VPS dan deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          # Naikkan timeout: build Docker + npm bisa beberapa menit.
+          command_timeout: 30m
+          script: |
+            set -e
+
+            # ====== KONFIGURASI (sesuaikan bila perlu) ======
+            PROJECT_DIR="/home/ubuntu/merute"
+            COMPOSE_FILE="docker-compose.prod.yml"
+            # Web root OpenResty 1Panel (situs merute.my.id).
+            WEB_ROOT="/home/ubuntu/onepanel/1panel/www/sites/merute.my.id/index"
+            # ================================================
+
+            echo "==> Masuk ke project dir"
+            cd "$PROJECT_DIR"
+
+            echo "==> Tarik kode terbaru dari origin/main"
+            git fetch --prune origin
+            # Samakan persis dengan origin/main. File .env, data/, dist/ ter-gitignore
+            # sehingga TIDAK tersentuh reset ini.
+            git reset --hard origin/main
+
+            echo "==> Rebuild backend + graphhopper"
+            docker compose -f "$COMPOSE_FILE" up -d --build
+
+            echo "==> Build frontend"
+            cd "$PROJECT_DIR/frontend"
+            # Butuh Node.js terpasang di VPS dan frontend/.env berisi VITE_MAPBOX_TOKEN.
+            npm ci
+            npm run build
+
+            echo "==> Salin hasil build ke web root"
+            # --delete membersihkan file lama yang sudah tidak ada di build baru.
+            # Tambahkan 'sudo' di depan rsync bila web root bukan milik user SSH.
+            rsync -a --delete "$PROJECT_DIR/frontend/dist/" "$WEB_ROOT/"
+
+            echo "==> Selesai. Cek kesehatan backend:"
+            curl -fsS http://127.0.0.1:8001/health || true
