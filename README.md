@@ -13,7 +13,6 @@ Rancang rute lari sendiri di atas peta interaktif, lihat jarak dan profil elevas
 ![FastAPI](https://img.shields.io/badge/FastAPI-Python-009688?logo=fastapi&logoColor=white)
 ![MapLibre](https://img.shields.io/badge/MapLibre-GL_JS-396CB2?logo=maplibre&logoColor=white)
 ![GraphHopper](https://img.shields.io/badge/GraphHopper-11.0-2B6CB0)
-
 </div>
 
 ---
@@ -50,6 +49,8 @@ Rancang rute lari sendiri di atas peta interaktif, lihat jarak dan profil elevas
 Pelari sering kesulitan merencanakan rute baru, terutama di area asing. Tool yang ada terkunci di balik paywall atau punya UX yang ketinggalan zaman. **MeRute** hadir sebagai platform yang *runner-first*, gratis, dan modern.
 
 User cukup mengeklik titik di peta. Rute otomatis *snap* ke jalan nyata lewat routing engine, jarak dan elevasi terhitung seketika, dan hasilnya bisa langsung diunduh ke perangkat GPS.
+
+> **Cakupan Area**: Saat ini MeRute baru mendukung wilayah **Surakarta Raya** (Solo dan sekitarnya), karena data routing GraphHopper masih terbatas pada area tersebut. Dukungan wilayah lain akan ditambahkan seiring perkembangan proyek.
 
 ---
 
