@@ -56,8 +56,9 @@ jobs:
 
             echo "==> Salin hasil build ke web root"
             # --delete membersihkan file lama yang sudah tidak ada di build baru.
-            # Tambahkan 'sudo' di depan rsync bila web root bukan milik user SSH.
-            rsync -a --delete "$PROJECT_DIR/frontend/dist/" "$WEB_ROOT/"
+            # Web root milik root (dibuat 1Panel) -> butuh sudo. User 'ubuntu' pada
+            # VPS Ubuntu umumnya sudah passwordless sudo (cloud-init).
+            sudo rsync -a --delete "$PROJECT_DIR/frontend/dist/" "$WEB_ROOT/"
 
             echo "==> Selesai. Cek kesehatan backend:"
             curl -fsS http://127.0.0.1:8001/health || true
