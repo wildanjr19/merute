@@ -1,9 +1,10 @@
 import { create } from 'zustand';
-import type { Waypoint, RouteSegment } from '../types';
+import type { Waypoint, RouteSegment, RouteInstruction } from '../types';
 
 interface RouteState {
   waypoints: Waypoint[];
   segments: RouteSegment[];
+  instructions: RouteInstruction[];
   totalDistance: number;
   isCalculating: boolean;
   paceMinPerKm: number;
@@ -15,7 +16,7 @@ interface RouteActions {
   addWaypoint: (waypoint: Waypoint) => void;
   updateWaypoint: (id: string, lat: number, lng: number) => void;
   removeWaypoint: (id: string) => void;
-  setSegments: (segments: RouteSegment[], totalDistance: number) => void;
+  setSegments: (segments: RouteSegment[], totalDistance: number, instructions?: RouteInstruction[]) => void;
   setIsCalculating: (isCalculating: boolean) => void;
   setPaceMinPerKm: (pace: number) => void;
   clearAll: () => void;
@@ -32,6 +33,7 @@ const MAX_HISTORY = 50;
 const initialState: RouteState = {
   waypoints: [],
   segments: [],
+  instructions: [],
   totalDistance: 0,
   isCalculating: false,
   paceMinPerKm: 6,
@@ -43,6 +45,7 @@ const saveToHistory = (state: RouteState): RouteState => {
   const snapshot: RouteState = {
     waypoints: [...state.waypoints],
     segments: [...state.segments],
+    instructions: [...state.instructions],
     totalDistance: state.totalDistance,
     isCalculating: state.isCalculating,
     paceMinPerKm: state.paceMinPerKm,
@@ -96,10 +99,11 @@ export const useRouteStore = create<RouteStore>((set, get) => ({
       };
     }),
 
-  setSegments: (segments, totalDistance) =>
+  setSegments: (segments, totalDistance, instructions = []) =>
     set({
       segments,
       totalDistance,
+      instructions,
     }),
 
   setIsCalculating: (isCalculating) =>
@@ -119,6 +123,7 @@ export const useRouteStore = create<RouteStore>((set, get) => ({
         ...newState,
         waypoints: [],
         segments: [],
+        instructions: [],
         totalDistance: 0,
       };
     }),

@@ -11,6 +11,18 @@ export interface RouteSegment {
   distance: number; // in meters
 }
 
+// Turn-by-turn instruction from GraphHopper
+export interface RouteInstruction {
+  text: string; // e.g. "Belok kiri ke Jl. Slamet Riyadi"
+  distance: number; // length of this leg in meters
+  duration: number; // in seconds
+  cumulativeDistance: number; // distance from start in meters
+  sign: number; // maneuver type (0=straight, -2=left, 2=right, etc)
+  interval: number[]; // [start_idx, end_idx] in coordinates
+  lat?: number;
+  lng?: number;
+}
+
 // Route calculation request
 export interface RouteCalculateRequest {
   waypoints: Array<{ lat: number; lng: number }>;
@@ -20,6 +32,8 @@ export interface RouteCalculateRequest {
 export interface RouteCalculateResponse {
   segments: RouteSegment[];
   totalDistance: number; // in meters
+  totalDuration?: number; // in seconds
+  instructions?: RouteInstruction[];
 }
 
 // Elevation point
@@ -107,7 +121,7 @@ export interface RouteTextRequest {
     elevationPoints: ElevationPoint[];
     elevationStatus: 'valid' | 'degraded';
   };
-  segments: unknown[];
+  instructions: RouteInstruction[];
   options: {
     paceSecondsPerKm: number;
     language: 'id' | 'en';

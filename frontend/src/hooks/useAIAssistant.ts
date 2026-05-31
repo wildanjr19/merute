@@ -21,7 +21,7 @@ const getApiErrorMessage = (error: unknown, fallback: string) => {
 };
 
 export function useAIAssistant({ elevationPoints, elevationGain, elevationLoss, elevationStatus }: UseAIAssistantProps) {
-  const { segments, totalDistance } = useRouteStore();
+  const { segments, instructions, totalDistance } = useRouteStore();
   const {
     setHydrationResult,
     setRouteTextResult,
@@ -101,7 +101,7 @@ export function useAIAssistant({ elevationPoints, elevationGain, elevationLoss, 
           elevationPoints,
           elevationStatus,
         },
-        segments: [],
+        instructions,
         options: {
           paceSecondsPerKm,
           language,

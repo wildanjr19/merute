@@ -48,7 +48,7 @@ export const useRouteCalculate = () => {
         waypoints: waypoints.map((wp) => ({ lat: wp.lat, lng: wp.lng })),
       });
 
-      setSegments(response.segments, response.totalDistance);
+      setSegments(response.segments, response.totalDistance, response.instructions ?? []);
       setIsCalculating(false);
     } catch (error: unknown) {
       if (isCanceledRequest(error)) {
@@ -59,7 +59,7 @@ export const useRouteCalculate = () => {
       setIsCalculating(false);
 
       const fallbackDistance = calculateFallbackDistance();
-      setSegments([], fallbackDistance);
+      setSegments([], fallbackDistance, []);
 
       toast.error('Gagal menghitung rute. Menggunakan estimasi garis lurus.', {
         duration: 3000,
@@ -77,7 +77,7 @@ export const useRouteCalculate = () => {
     }
 
     if (waypoints.length < 2) {
-      setSegments([], 0);
+      setSegments([], 0, []);
       setIsCalculating(false);
       return;
     }
