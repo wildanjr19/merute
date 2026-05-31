@@ -19,5 +19,12 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: { proxy },
     preview: { proxy },
+    build: {
+      // Vite 8 + Rolldown memakai minifier oxc secara default, yang masih baru
+      // dan merusak kode Web Worker MapLibre GL (gejala: "ue is not defined"
+      // saat memproses GeoJSON -> garis rute tidak muncul di produksi).
+      // esbuild lebih matang dan kompatibel dengan MapLibre.
+      minify: 'esbuild',
+    },
   }
 })

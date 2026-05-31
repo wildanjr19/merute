@@ -54,7 +54,7 @@ export const ElevationChart = ({ points }: ElevationChartProps) => {
 
   return (
     <div className="w-full h-full">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
         <AreaChart
           data={chartData}
           margin={{ top: 8, right: 4, left: 4, bottom: 0 }}
