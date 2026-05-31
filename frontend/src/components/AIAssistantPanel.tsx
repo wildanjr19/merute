@@ -196,7 +196,7 @@ export function AIAssistantPanel({
               )}
 
               {hasHydration && (
-                <div className="max-h-36 space-y-2 overflow-y-auto pr-1">
+                <div className="space-y-2">
                   {hydrationSuggestions.map((point, i) => (
                     <div key={`${point.label}-${i}`} className="rounded-lg border border-outline-variant/30 bg-white/86 p-2.5">
                       <div className="flex items-center justify-between gap-2">
@@ -252,7 +252,7 @@ export function AIAssistantPanel({
                   </div>
 
                   {routeText.steps.length > 0 && (
-                    <div className="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-outline-variant/30 bg-white/86 p-2 pr-1">
+                    <div className="space-y-1 rounded-lg border border-outline-variant/30 bg-white/86 p-2">
                       {routeText.steps.map((step, i) => (
                         <p key={`${step.distanceKm}-${i}`} className="text-[11px] leading-4 text-on-surface">
                           <span className="font-extrabold text-primary-container">KM {step.distanceKm.toFixed(1)}</span>{' '}
