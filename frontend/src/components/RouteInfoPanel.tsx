@@ -121,7 +121,7 @@ export default function RouteInfoPanel() {
 
   return (
     <div className="flex h-full w-full flex-col border-r border-outline-variant/40 bg-[rgba(250,252,255,0.9)] shadow-[18px_0_42px_rgba(23,27,41,0.08)] backdrop-blur-xl">
-      <div className="px-5 pb-2 pt-5">
+      <div className="shrink-0 px-5 pb-2 pt-5">
         <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-primary-container">
           Route builder
         </p>
@@ -130,6 +130,7 @@ export default function RouteInfoPanel() {
         </h1>
       </div>
 
+      <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="space-y-3 px-5">
         <div className="rounded-xl border border-outline-variant/45 bg-white/86 p-3 shadow-[0_10px_28px_rgba(23,27,41,0.06)]">
           <div className="grid grid-cols-2 gap-2">
@@ -290,7 +291,7 @@ export default function RouteInfoPanel() {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
+      <div className="px-5 pb-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-[12px] font-extrabold uppercase tracking-[0.12em] text-on-surface">Waypoints</h2>
           <span className="text-xs font-semibold text-on-surface-variant">
@@ -359,8 +360,9 @@ export default function RouteInfoPanel() {
         elevationLoss={elevationData?.elevationLoss || 0}
         elevationStatus={elevationData?.elevationStatus || 'valid'}
       />
+      </div>
 
-      <div className="border-t border-outline-variant/35 bg-white/66 px-5 py-4">
+      <div className="shrink-0 border-t border-outline-variant/35 bg-white/66 px-5 py-4">
         <p className="text-xs leading-5 text-on-surface-variant">
           <strong className="font-bold text-on-surface">Tips:</strong> {routeTip}
         </p>
