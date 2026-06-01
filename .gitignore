@@ -75,6 +75,5 @@ GRAPHHOPPER_SETUP.md
 design/
 CODING_GUIDE.md
 GUIDE.md
-graphhopper-config.yml
 .kilo/
-.agents/
+gh_prep/
