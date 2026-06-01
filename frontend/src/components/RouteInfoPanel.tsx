@@ -1,12 +1,15 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { nearestPointOnLine, length, lineSlice, point } from '@turf/turf';
 import type { Feature, LineString } from 'geojson';
 import { useRouteStore } from '../stores/routeStore';
+import { useMapStore } from '../stores/mapStore';
 import { useElevation } from '../hooks/useElevation';
 import { useSplitMarkerStore } from '../stores/splitMarkerStore';
 import { AIAssistantPanel } from './AIAssistantPanel';
 
 export default function RouteInfoPanel() {
+  const [activeWaypointId, setActiveWaypointId] = useState<string | null>(null);
+
   const {
     waypoints,
     segments,
@@ -21,6 +24,7 @@ export default function RouteInfoPanel() {
     clearAll,
     removeWaypoint,
   } = useRouteStore();
+  const { flyTo } = useMapStore();
 
   const {
     enabled: splitEnabled,
@@ -69,12 +73,6 @@ export default function RouteInfoPanel() {
     return `${(meters / 1000).toFixed(2)} km`;
   };
 
-  const formatPace = (pace: number) => {
-    const minutes = Math.floor(pace);
-    const seconds = Math.round((pace - minutes) * 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')} /km`;
-  };
-
   const calculateEstimatedTime = (meters: number) => {
     if (meters === 0) return '--';
     const distanceKm = meters / 1000;
@@ -92,27 +90,41 @@ export default function RouteInfoPanel() {
     if (index === 0) {
       return {
         label: 'A',
-        title: 'Startpoint',
-        bgColor: 'bg-secondary',
-        borderColor: 'border-l-secondary',
+        title: 'Mulai',
+        markerColor: 'border-secondary bg-secondary',
+        connectorColor: 'bg-secondary/35',
       };
     }
 
     if (index === waypoints.length - 1) {
       return {
         label: 'B',
-        title: 'Finish',
-        bgColor: 'bg-error',
-        borderColor: 'border-l-error',
+        title: 'Selesai',
+        markerColor: 'border-error bg-error',
+        connectorColor: 'bg-outline-variant',
       };
     }
 
     return {
       label: String(index),
-      title: index === 1 ? 'Street Corner' : 'Checkpoint',
-      bgColor: 'bg-primary-container',
-      borderColor: 'border-l-primary-container',
+      title: `Titik ${index}`,
+      markerColor: 'border-primary-container bg-white text-primary-container',
+      connectorColor: 'bg-outline-variant',
     };
+  };
+
+  const formatWaypointDistance = (meters: number | undefined) => {
+    if (meters === undefined) return '-- km';
+
+    return `${(meters / 1000).toLocaleString('id-ID', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    })} km`;
+  };
+
+  const focusWaypoint = (id: string, lng: number, lat: number) => {
+    setActiveWaypointId(id);
+    flyTo([lng, lat], 16);
   };
 
   const routeTip = waypoints.length === 0
@@ -293,7 +305,7 @@ export default function RouteInfoPanel() {
 
       <div className="px-5 pb-4">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[12px] font-extrabold uppercase tracking-[0.12em] text-on-surface">Waypoints</h2>
+          <h2 className="text-[12px] font-extrabold uppercase tracking-[0.12em] text-on-surface">Titik rute</h2>
           <span className="text-xs font-semibold text-on-surface-variant">
             {waypoints.length > 0 ? `${waypoints.length} titik` : 'Belum ada titik'}
           </span>
@@ -310,43 +322,69 @@ export default function RouteInfoPanel() {
             <p className="mt-1 text-xs leading-5 text-on-surface-variant">Klik lokasi start, lalu tambah titik berikutnya untuk membentuk rute.</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="overflow-hidden rounded-xl border border-outline-variant/45 bg-white/86 shadow-[0_8px_22px_rgba(23,27,41,0.05)]">
             {waypoints.map((waypoint, index) => {
-              const { label, title, bgColor, borderColor } = getWaypointMeta(index);
+              const { label, title, markerColor, connectorColor } = getWaypointMeta(index);
+              const isActive = activeWaypointId === waypoint.id;
+              const isIntermediate = index > 0 && index < waypoints.length - 1;
 
               return (
                 <div
                   key={waypoint.id}
-                  className={`group flex min-h-[58px] items-center gap-3 rounded-lg border border-outline-variant/35 border-l-4 bg-white/86 px-3 py-2 shadow-[0_6px_18px_rgba(23,27,41,0.05)] transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_10px_22px_rgba(23,27,41,0.09)] ${borderColor}`}
+                  className={`group relative flex min-h-[62px] items-center gap-3 px-3 transition-colors ${
+                    index > 0 ? 'border-t border-outline-variant/35' : ''
+                  } ${isActive ? 'bg-surface-container-low' : 'hover:bg-surface-container-low/55'}`}
                 >
-                  <div
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-extrabold text-on-primary shadow-sm ${bgColor}`}
-                  >
-                    {label}
+                  <div className="relative flex w-7 shrink-0 self-stretch items-center justify-center">
+                    {index < waypoints.length - 1 && (
+                      <span
+                        className={`absolute bottom-0 left-1/2 top-1/2 w-px -translate-x-1/2 ${connectorColor}`}
+                        aria-hidden="true"
+                      />
+                    )}
+                    {index > 0 && (
+                      <span
+                        className="absolute bottom-1/2 left-1/2 top-0 w-px -translate-x-1/2 bg-outline-variant"
+                        aria-hidden="true"
+                      />
+                    )}
+                    <span
+                      className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full border-2 text-[10px] font-extrabold shadow-[0_2px_6px_rgba(23,27,41,0.12)] ${markerColor}`}
+                    >
+                      {label}
+                    </span>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-extrabold uppercase tracking-[0.04em] text-on-surface">
+
+                  <button
+                    type="button"
+                    onClick={() => focusWaypoint(waypoint.id, waypoint.lng, waypoint.lat)}
+                    className="min-w-0 flex-1 py-3 text-left outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-primary-container/45"
+                    aria-label={`Fokus ke ${title}`}
+                  >
+                    <p className="truncate text-[13px] font-extrabold text-on-surface">
                       {title}
                     </p>
-                    <p className="truncate font-mono text-[12px] font-semibold text-on-surface-variant">
-                      {cumulativeDistances[index] !== undefined
-                        ? `KM ${(cumulativeDistances[index] / 1000).toFixed(1)}`
-                        : 'KM --'}
+                    <p className="mt-0.5 truncate text-[11px] font-semibold text-on-surface-variant">
+                      {formatWaypointDistance(cumulativeDistances[index])} dari mulai
                     </p>
-                  </div>
-                  <span className="hidden rounded-full bg-surface-container-low px-2 py-1 text-[10px] font-bold text-on-surface-variant group-hover:inline-block">
-                    {formatPace(paceMinPerKm)}
-                  </span>
-                  <button
-                    onClick={() => removeWaypoint(waypoint.id)}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-error opacity-70 transition-all hover:bg-error-container hover:opacity-100"
-                    title="Hapus waypoint"
-                    aria-label="Hapus waypoint"
-                  >
-                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
                   </button>
+
+                  {isIntermediate && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        removeWaypoint(waypoint.id);
+                      }}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-on-surface-variant/65 transition-colors hover:bg-error-container hover:text-error focus-visible:bg-error-container focus-visible:text-error focus-visible:outline-none"
+                      title={`Hapus ${title}`}
+                      aria-label={`Hapus ${title}`}
+                    >
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               );
             })}
