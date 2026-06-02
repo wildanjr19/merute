@@ -8,8 +8,6 @@ import { ElevationPanel } from './components/ElevationPanel';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useMapStore } from './stores/mapStore';
 
-const navItems = ['Route Planner', 'My Activities', 'Community'];
-
 function App() {
   const { setCenter, setZoom } = useMapStore();
 
@@ -26,19 +24,9 @@ function App() {
             MeRute
           </a>
           <nav className="hidden items-center gap-7 md:flex lg:absolute lg:left-[360px] lg:top-0">
-            {navItems.map((item, index) => (
-              <button
-                key={item}
-                className={`relative h-[78px] px-0 text-[15px] font-semibold tracking-[0.04em] transition-colors ${
-                  index === 0
-                    ? 'text-primary-container after:absolute after:bottom-5 after:left-0 after:h-0.5 after:w-full after:rounded-full after:bg-primary-container'
-                    : 'text-on-surface hover:text-primary-container'
-                }`}
-                type="button"
-              >
-                {item}
-              </button>
-            ))}
+            <span className="relative flex h-[78px] items-center text-[15px] font-semibold tracking-[0.04em] text-primary-container after:absolute after:bottom-5 after:left-0 after:h-0.5 after:w-full after:rounded-full after:bg-primary-container">
+              Route Planner
+            </span>
           </nav>
         </div>
 
