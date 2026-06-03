@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import MapCanvas from './components/MapCanvas';
 import RouteInfoPanel from './components/RouteInfoPanel';
@@ -9,6 +10,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { useMapStore } from './stores/mapStore';
 
 function App() {
+  const [isRoutePanelOpen, setIsRoutePanelOpen] = useState(false);
   const { setCenter, setZoom } = useMapStore();
 
   const handleSelectLocation = (lat: number, lng: number) => {
@@ -60,7 +62,31 @@ function App() {
       </header>
 
       <main className="relative flex min-h-0 flex-1 overflow-hidden">
-        <aside className="relative z-30 hidden w-[360px] shrink-0 lg:block">
+        {isRoutePanelOpen && (
+          <button
+            type="button"
+            className="fixed inset-x-0 bottom-0 top-[78px] z-40 bg-[rgba(23,27,41,0.38)] backdrop-blur-[2px] lg:hidden"
+            aria-label="Close route details"
+            onClick={() => setIsRoutePanelOpen(false)}
+          />
+        )}
+
+        <aside
+          className={`fixed bottom-0 left-0 top-[78px] z-50 w-[min(360px,calc(100vw-32px))] shrink-0 transition-transform duration-200 ease-out lg:relative lg:bottom-auto lg:top-auto lg:z-30 lg:block lg:w-[360px] lg:translate-x-0 ${
+            isRoutePanelOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          }`}
+          aria-label="Route details panel"
+        >
+          <button
+            type="button"
+            className="glass-panel-strong absolute right-3 top-3 z-10 grid h-10 w-10 place-items-center rounded-full text-on-surface-variant shadow-[0_12px_26px_rgba(23,27,41,0.14)] transition-colors hover:text-primary-container lg:hidden"
+            aria-label="Close route details"
+            onClick={() => setIsRoutePanelOpen(false)}
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
           <RouteInfoPanel />
         </aside>
 
@@ -69,6 +95,18 @@ function App() {
             <MapCanvas />
             <SearchBar onSelectLocation={handleSelectLocation} />
             <LayerSwitcher />
+            <button
+              type="button"
+              className="absolute left-4 top-24 z-20 flex h-12 items-center gap-2 rounded-full border border-white/55 bg-primary-container px-4 text-sm font-extrabold text-white shadow-[0_18px_38px_rgba(0,80,203,0.24)] transition-all hover:-translate-y-0.5 hover:bg-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-container/25 lg:hidden"
+              aria-label="Open route details"
+              aria-expanded={isRoutePanelOpen}
+              onClick={() => setIsRoutePanelOpen(true)}
+            >
+              <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M5 7h14M5 12h14M5 17h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <span>Route</span>
+            </button>
           </ErrorBoundary>
         </section>
       </main>
