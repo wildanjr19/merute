@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from app.api.health import router as health_router
 from app.api.routes import router as routes_router
 from app.api.ai import router as ai_router
+from app.api.planner import router as planner_router
 
 load_dotenv()
 
@@ -30,6 +31,7 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(routes_router)
 app.include_router(ai_router)
+app.include_router(planner_router)
 
 
 @app.get("/")

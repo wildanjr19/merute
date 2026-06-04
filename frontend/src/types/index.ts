@@ -129,3 +129,71 @@ export interface RouteTextRequest {
   };
 }
 
+// === Smart Run Planner Types ===
+
+export type PlannerPriority = 'balanced' | 'avoid_heat' | 'avoid_rain';
+
+export interface PlannerTimeWindow {
+  start: string;
+  end: string;
+}
+
+export interface PlannerWeatherSnapshot {
+  temperature: number;
+  apparentTemperature: number;
+  humidity: number;
+  rainProbability: number;
+  rainVolume: number;
+  weatherCode: number;
+  windSpeed: number;
+  windGust: number;
+  uvIndex: number;
+}
+
+export interface PlannerRecommendation {
+  startTime: string;
+  finishTime: string;
+  score: number;
+  label: 'best' | 'alternative';
+  weather: PlannerWeatherSnapshot;
+  reasons: string[];
+  risks: string[];
+}
+
+export interface PlannerAvoidWindow {
+  start: string;
+  end: string;
+  reason: string;
+  score: number;
+}
+
+export interface PlannerProviderMeta {
+  name: string;
+  attribution: string;
+  timezone?: string | null;
+  forecastDate: string;
+}
+
+export interface StartTimeRequest {
+  route: {
+    polyline: GeoJSON.LineString;
+    totalDistance: number;
+    elevationGain: number;
+    elevationLoss: number;
+  };
+  preferences: {
+    date: string;
+    timeWindows: PlannerTimeWindow[];
+    paceSecondsPerKm: number;
+    priority: PlannerPriority;
+  };
+}
+
+export interface StartTimeResponse {
+  summary: string;
+  recommendations: PlannerRecommendation[];
+  avoidWindows: PlannerAvoidWindow[];
+  source: 'rules';
+  provider: PlannerProviderMeta;
+}
+

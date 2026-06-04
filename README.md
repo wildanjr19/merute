@@ -4,7 +4,7 @@
 
 ### Running Route Builder untuk Pelari Modern
 
-Rancang rute lari sendiri di atas peta interaktif, lihat jarak dan profil elevasi secara real-time, lalu export ke GPX/TCX yang kompatibel dengan Strava, Garmin, dan Wahoo.
+Rancang rute lari sendiri di atas peta interaktif, lihat jarak dan profil elevasi secara real-time, dapatkan rekomendasi waktu lari berbasis cuaca, lalu export ke GPX/TCX yang kompatibel dengan Strava, Garmin, dan Wahoo.
 
 [Fitur](#fitur-unggulan) · [Quick Start](#quick-start) · [Arsitektur](#arsitektur) · [API](#api-reference) · [Struktur Proyek](#struktur-proyek)
 
@@ -63,6 +63,7 @@ User cukup mengeklik titik di peta. Rute otomatis *snap* ke jalan nyata lewat ro
 | ⛰️ | **Profil Elevasi** | Grafik elevasi interaktif (Recharts) sepanjang rute, lengkap dengan total elevation gain & loss. |
 | 💾 | **Export GPX / TCX** | Unduh rute langsung dari browser dalam format standar yang kompatibel Strava, Garmin, dan Wahoo. |
 | 🔍 | **Pencarian Lokasi** | Cari dan lompat ke lokasi mana pun lewat search bar terintegrasi. |
+| ☀️ | **Smart Run Planner** | Rekomendasi jam mulai lari terbaik berdasarkan cuaca per jam, durasi rute, pace, elevasi, dan prioritas user. |
 | 💧 | **AI Hydration Points** | Rekomendasi titik hidrasi sepanjang rute (hybrid: rules baseline + AI enhancement). |
 | 📝 | **AI Cue Sheet** | Panduan teks natural per segmen rute, dibuat otomatis dengan fallback template. |
 | ⌨️ | **Keyboard Shortcuts** | Undo, redo, dan aksi cepat lain untuk alur kerja yang mulus. |
@@ -137,10 +138,12 @@ Jalankan ketiga service secara paralel (masing-masing di terminal terpisah), lal
 - **httpx** — async HTTP client ke layanan eksternal
 - **GraphHopper** — routing engine (snap-to-road)
 - **Open-Elevation API** — data elevasi
+- **Open-Meteo API** — forecast cuaca per jam untuk Smart Run Planner
 
 ### Data & Infrastruktur
 - **GraphHopper 11.0** — routing berbasis Java
 - **OpenStreetMap** — data peta (Surakarta untuk development)
+- **Open-Meteo** — provider cuaca untuk rekomendasi jam mulai lari
 - **Docker Compose** — orkestrasi opsional
 
 ---
@@ -175,6 +178,7 @@ Export GPX/TCX dilakukan di sisi klien dari polyline yang sudah dihitung, sehing
 | `GET` | `/health` | Health check backend + status GraphHopper |
 | `POST` | `/api/routes/calculate` | Hitung rute snap-to-road dari daftar waypoint |
 | `POST` | `/api/routes/elevation` | Ambil profil elevasi dari polyline |
+| `POST` | `/api/planner/start-time` | Rekomendasi jam mulai lari berdasarkan rute aktif, pace, prioritas, dan forecast cuaca |
 | `POST` | `/api/ai/hydration-suggestions` | Rekomendasi titik hidrasi (hybrid rules + AI) |
 | `POST` | `/api/ai/route-text` | Generate cue sheet / panduan teks rute |
 | `GET` | `/docs` | Dokumentasi API interaktif (Swagger UI) |
@@ -214,15 +218,15 @@ Tanpa kredensial yang valid, endpoint AI tetap berfungsi memakai *rules baseline
 MeRute/
 ├── backend/                    # FastAPI backend
 │   ├── app/
-│   │   ├── api/                # Endpoint: health, routes, ai
-│   │   ├── services/           # GraphHopper, elevation, AI, rate limiter
-│   │   ├── schemas/            # Pydantic models
+│   │   ├── api/                # Endpoint: health, routes, planner, ai
+│   │   ├── services/           # GraphHopper, elevation, weather, planner, AI, rate limiter
+│   │   ├── schemas/            # Pydantic models route, planner, ai
 │   │   └── config/             # Konfigurasi AI
 │   ├── tests/                  # Unit test backend
 │   └── run.py                  # Entry point server
 ├── frontend/                   # React frontend
 │   ├── src/
-│   │   ├── components/         # Map, panel rute, elevasi, AI, dll
+│   │   ├── components/         # Map, panel rute, elevasi, Smart Planner, AI, dll
 │   │   ├── stores/             # Zustand stores
 │   │   ├── services/           # API client
 │   │   ├── hooks/              # Custom hooks

@@ -1,5 +1,15 @@
 import axios, { AxiosError } from 'axios';
-import type { ElevationResponse, RouteCalculateRequest, RouteCalculateResponse, HydrationRequest, HydrationResponse, RouteTextRequest, RouteTextResponse } from '../types/index.js';
+import type {
+  ElevationResponse,
+  HydrationRequest,
+  HydrationResponse,
+  RouteCalculateRequest,
+  RouteCalculateResponse,
+  RouteTextRequest,
+  RouteTextResponse,
+  StartTimeRequest,
+  StartTimeResponse,
+} from '../types/index.js';
 
 // Base API configuration.
 // Default kosong = same-origin: request memakai path relatif (/api, /health),
@@ -84,6 +94,12 @@ export const api = {
   // AI: Route text
   getRouteText: async (request: RouteTextRequest): Promise<RouteTextResponse> => {
     const response = await apiClient.post('/api/ai/route-text', request);
+    return response.data;
+  },
+
+  // Smart Run Planner: start-time recommendations
+  getStartTimeRecommendations: async (request: StartTimeRequest): Promise<StartTimeResponse> => {
+    const response = await apiClient.post('/api/planner/start-time', request);
     return response.data;
   },
 };

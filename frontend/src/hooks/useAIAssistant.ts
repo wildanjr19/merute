@@ -35,6 +35,20 @@ export function useAIAssistant({ elevationPoints, elevationGain, elevationLoss, 
     return segments[0].polyline;
   };
 
+  const getRouteKey = () => {
+    const polyline = getPolyline();
+    const coordinates = polyline?.coordinates ?? [];
+    const first = coordinates[0] ?? [];
+    const last = coordinates[coordinates.length - 1] ?? [];
+
+    return [
+      Math.round(totalDistance),
+      coordinates.length,
+      first.map((value) => value.toFixed(5)).join(','),
+      last.map((value) => value.toFixed(5)).join(','),
+    ].join(':');
+  };
+
   const generateHydration = async (
     routeType: 'easy_run' | 'long_run' | 'race' | 'trail' | 'custom' = 'easy_run',
     paceSecondsPerKm: number = 360,
@@ -66,7 +80,7 @@ export function useAIAssistant({ elevationPoints, elevationGain, elevationLoss, 
           notes: '',
         },
       });
-      setHydrationResult(result);
+      setHydrationResult(result, getRouteKey());
       toast.success(`${result.points.length} titik hidrasi direkomendasikan`);
     } catch (err: unknown) {
       const msg = getApiErrorMessage(err, 'Gagal generate rekomendasi hidrasi');
@@ -108,7 +122,7 @@ export function useAIAssistant({ elevationPoints, elevationGain, elevationLoss, 
           format,
         },
       });
-      setRouteTextResult(result);
+      setRouteTextResult(result, getRouteKey());
       toast.success('Cue sheet berhasil di-generate');
     } catch (err: unknown) {
       const msg = getApiErrorMessage(err, 'Gagal generate route text');
