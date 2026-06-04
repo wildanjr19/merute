@@ -5,10 +5,14 @@ import { useRouteStore } from '../stores/routeStore';
 import { useMapStore } from '../stores/mapStore';
 import { useElevation } from '../hooks/useElevation';
 import { useSplitMarkerStore } from '../stores/splitMarkerStore';
+import { useAIStore } from '../stores/aiStore';
+import { usePlannerStore } from '../stores/plannerStore';
 import { AIAssistantPanel } from './AIAssistantPanel';
+import { SmartPlannerPanel } from './SmartPlannerPanel';
 
 export default function RouteInfoPanel() {
   const [activeWaypointId, setActiveWaypointId] = useState<string | null>(null);
+  const [activeDockTool, setActiveDockTool] = useState<'ai' | 'planner' | null>(null);
 
   const {
     waypoints,
@@ -25,6 +29,8 @@ export default function RouteInfoPanel() {
     removeWaypoint,
   } = useRouteStore();
   const { flyTo } = useMapStore();
+  const clearAIResults = useAIStore((state) => state.clearAll);
+  const clearPlannerResult = usePlannerStore((state) => state.clearResult);
 
   const {
     enabled: splitEnabled,
@@ -65,6 +71,9 @@ export default function RouteInfoPanel() {
     );
     if (confirmed) {
       clearAll();
+      clearAIResults();
+      clearPlannerResult();
+      setActiveDockTool(null);
     }
   };
 
@@ -261,12 +270,12 @@ export default function RouteInfoPanel() {
         </div>
       </div>
 
-      <div className="px-5 py-4">
+      <div className="px-5 py-3">
         <div className="grid grid-cols-3 gap-2">
           <button
             onClick={undo}
             disabled={!canUndo()}
-            className="flex h-11 items-center justify-center gap-2 rounded-lg border border-outline-variant/45 bg-white/82 px-3 text-sm font-bold text-on-surface shadow-sm transition-all hover:-translate-y-0.5 hover:bg-surface-container-low disabled:translate-y-0 disabled:opacity-40"
+            className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-outline-variant/45 bg-white/82 px-2.5 text-xs font-bold text-on-surface shadow-sm transition-all hover:-translate-y-0.5 hover:bg-surface-container-low disabled:translate-y-0 disabled:opacity-40"
             title="Undo (Ctrl+Z)"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -278,7 +287,7 @@ export default function RouteInfoPanel() {
           <button
             onClick={redo}
             disabled={!canRedo()}
-            className="flex h-11 items-center justify-center gap-2 rounded-lg border border-outline-variant/45 bg-white/82 px-3 text-sm font-bold text-on-surface shadow-sm transition-all hover:-translate-y-0.5 hover:bg-surface-container-low disabled:translate-y-0 disabled:opacity-40"
+            className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-outline-variant/45 bg-white/82 px-2.5 text-xs font-bold text-on-surface shadow-sm transition-all hover:-translate-y-0.5 hover:bg-surface-container-low disabled:translate-y-0 disabled:opacity-40"
             title="Redo (Ctrl+Shift+Z)"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -290,7 +299,7 @@ export default function RouteInfoPanel() {
           <button
             onClick={handleClearAll}
             disabled={waypoints.length === 0}
-            className="flex h-11 items-center justify-center gap-2 rounded-lg border border-error-container bg-error-container px-3 text-sm font-bold text-on-error-container shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#ffc8c2] disabled:translate-y-0 disabled:opacity-40"
+            className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-error-container bg-error-container px-2.5 text-xs font-bold text-on-error-container shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#ffc8c2] disabled:translate-y-0 disabled:opacity-40"
             title="Clear All (Esc)"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -392,18 +401,32 @@ export default function RouteInfoPanel() {
         )}
       </div>
 
-      <AIAssistantPanel
-        elevationPoints={elevationData?.points || []}
-        elevationGain={elevationData?.elevationGain || 0}
-        elevationLoss={elevationData?.elevationLoss || 0}
-        elevationStatus={elevationData?.elevationStatus || 'valid'}
-      />
       </div>
 
-      <div className="shrink-0 border-t border-outline-variant/35 bg-white/66 px-5 py-4">
+      <div className="shrink-0 border-t border-outline-variant/35 bg-white/78 backdrop-blur-xl">
+        <div className="max-h-[58vh] overflow-y-auto">
+          <AIAssistantPanel
+            elevationPoints={elevationData?.points || []}
+            elevationGain={elevationData?.elevationGain || 0}
+            elevationLoss={elevationData?.elevationLoss || 0}
+            elevationStatus={elevationData?.elevationStatus || 'valid'}
+            isExpanded={activeDockTool === 'ai'}
+            onToggle={() => setActiveDockTool((tool) => (tool === 'ai' ? null : 'ai'))}
+          />
+
+          <SmartPlannerPanel
+            elevationGain={elevationData?.elevationGain || 0}
+            elevationLoss={elevationData?.elevationLoss || 0}
+            isExpanded={activeDockTool === 'planner'}
+            onToggle={() => setActiveDockTool((tool) => (tool === 'planner' ? null : 'planner'))}
+          />
+        </div>
+
+        <div className="border-t border-outline-variant/35 px-5 py-3">
         <p className="text-xs leading-5 text-on-surface-variant">
           <strong className="font-bold text-on-surface">Tips:</strong> {routeTip}
         </p>
+        </div>
       </div>
     </div>
   );

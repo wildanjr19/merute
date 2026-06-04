@@ -16,11 +16,12 @@ interface AIState {
   isGeneratingRouteText: boolean;
   error: string | null;
   activeTab: 'hydration' | 'routetext';
+  lastRouteKey: string | null;
 }
 
 interface AIActions {
-  setHydrationResult: (result: HydrationResponse) => void;
-  setRouteTextResult: (result: RouteTextResponse) => void;
+  setHydrationResult: (result: HydrationResponse, routeKey?: string) => void;
+  setRouteTextResult: (result: RouteTextResponse, routeKey?: string) => void;
   setIsGeneratingHydration: (val: boolean) => void;
   setIsGeneratingRouteText: (val: boolean) => void;
   setError: (error: string | null) => void;
@@ -42,19 +43,22 @@ export const useAIStore = create<AIStore>((set) => ({
   isGeneratingRouteText: false,
   error: null,
   activeTab: 'hydration',
+  lastRouteKey: null,
 
-  setHydrationResult: (result) =>
+  setHydrationResult: (result, lastRouteKey) =>
     set({
       hydrationSuggestions: result.points,
       hydrationSummary: result.summary,
       hydrationSource: result.source,
       hydrationWarnings: result.warnings,
+      lastRouteKey: lastRouteKey ?? null,
       error: null,
     }),
 
-  setRouteTextResult: (result) =>
+  setRouteTextResult: (result, lastRouteKey) =>
     set({
       routeText: result,
+      lastRouteKey: lastRouteKey ?? null,
       error: null,
     }),
 
@@ -80,6 +84,7 @@ export const useAIStore = create<AIStore>((set) => ({
       hydrationSource: null,
       hydrationWarnings: [],
       routeText: null,
+      lastRouteKey: null,
       error: null,
     }),
 }));
