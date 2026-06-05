@@ -86,24 +86,24 @@ button:disabled {
 
 .waypoint-marker {
   display: flex;
-  width: 34px;
-  height: 34px;
+  width: 24px;
+  height: 24px;
   align-items: center;
   justify-content: center;
-  border: 3px solid rgba(255, 255, 255, 0.92);
+  border: 2px solid rgba(255, 255, 255, 0.94);
   border-radius: 9999px;
-  box-shadow: 0 12px 26px rgba(0, 80, 203, 0.24), 0 2px 6px rgba(23, 27, 41, 0.2);
+  box-shadow: 0 8px 18px rgba(0, 80, 203, 0.22), 0 2px 5px rgba(23, 27, 41, 0.2);
   color: #fff;
   cursor: grab;
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 800;
   line-height: 1;
   transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
 }
 
 .waypoint-marker:hover {
-  box-shadow: 0 16px 30px rgba(0, 80, 203, 0.28), 0 3px 8px rgba(23, 27, 41, 0.24);
-  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 10px 22px rgba(0, 80, 203, 0.26), 0 3px 7px rgba(23, 27, 41, 0.22);
+  transform: translateY(-1px) scale(1.08);
 }
 
 .waypoint-marker:active {
