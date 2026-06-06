@@ -1,18 +1,21 @@
 import { useMemo, useState } from 'react';
 import { nearestPointOnLine, length, lineSlice, point } from '@turf/turf';
 import type { Feature, LineString } from 'geojson';
+import toast from 'react-hot-toast';
 import { useRouteStore } from '../stores/routeStore';
 import { useMapStore } from '../stores/mapStore';
 import { useElevation } from '../hooks/useElevation';
 import { useSplitMarkerStore } from '../stores/splitMarkerStore';
 import { useAIStore } from '../stores/aiStore';
 import { usePlannerStore } from '../stores/plannerStore';
+import { downloadRouteFile, type ExportFormat } from '../utils/routeExport';
 import { AIAssistantPanel } from './AIAssistantPanel';
 import { SmartPlannerPanel } from './SmartPlannerPanel';
 
 export default function RouteInfoPanel() {
   const [activeWaypointId, setActiveWaypointId] = useState<string | null>(null);
   const [activeDockTool, setActiveDockTool] = useState<'ai' | 'planner' | null>(null);
+  const [isSaveMenuOpen, setIsSaveMenuOpen] = useState(false);
 
   const {
     waypoints,
@@ -64,6 +67,7 @@ export default function RouteInfoPanel() {
   }, [waypoints, segments]);
 
   const { elevationData } = useElevation();
+  const hasSavableRoute = segments.length > 0 && totalDistance > 0;
 
   const handleClearAll = () => {
     const confirmed = window.confirm(
@@ -75,6 +79,32 @@ export default function RouteInfoPanel() {
       clearPlannerResult();
       setActiveDockTool(null);
     }
+  };
+
+  const handleSaveRoute = (format: ExportFormat) => {
+    if (!hasSavableRoute) {
+      toast.error('Buat rute terlebih dahulu sebelum menyimpan');
+      return;
+    }
+
+    const distanceKm = totalDistance / 1000;
+    const routeName = `MeRute ${distanceKm.toLocaleString('id-ID', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    })} km`;
+
+    downloadRouteFile(
+      {
+        segments,
+        totalDistance,
+        paceMinPerKm,
+        elevationPoints: elevationData?.points,
+        routeName,
+      },
+      format,
+    );
+    setIsSaveMenuOpen(false);
+    toast.success(`Rute disimpan sebagai ${format.toUpperCase()}`);
   };
 
   const formatDistance = (meters: number) => {
@@ -182,16 +212,16 @@ export default function RouteInfoPanel() {
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-[1fr_104px] gap-2">
-            <label className="flex min-w-0 items-center gap-2 rounded-lg border border-outline-variant/45 bg-surface-container-low/75 px-3 py-2">
-              <svg className="h-4 w-4 shrink-0 text-primary-container" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <div className="mt-2 grid grid-cols-[minmax(0,1fr)_78px] gap-2">
+            <label className="flex h-9 min-w-0 items-center gap-2 rounded-lg border border-outline-variant/45 bg-surface-container-low/75 px-3">
+              <svg className="h-3.5 w-3.5 shrink-0 text-primary-container" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               <span className="sr-only">Running pace per kilometer</span>
               <select
                 value={paceMinPerKm}
                 onChange={(e) => setPaceMinPerKm(Number(e.target.value))}
-                className="min-w-0 flex-1 bg-transparent text-sm font-bold text-on-surface outline-none"
+                className="min-w-0 flex-1 bg-transparent text-[12px] font-bold text-on-surface outline-none"
                 aria-label="Running pace per kilometer"
               >
                 <option value={4}>4:00 /km</option>
@@ -208,13 +238,13 @@ export default function RouteInfoPanel() {
               </select>
             </label>
 
-            <div className="rounded-lg border border-outline-variant/35 bg-white/70 px-3 py-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-on-surface-variant">Points</p>
-              <p className="text-sm font-extrabold text-on-surface">{waypoints.length}</p>
+            <div className="flex h-9 items-center justify-between gap-2 rounded-lg border border-outline-variant/35 bg-white/70 px-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant">Pts</p>
+              <p className="text-sm font-extrabold leading-none text-on-surface">{waypoints.length}</p>
             </div>
           </div>
 
-          <div className="mt-3 rounded-lg border border-outline-variant/35 bg-surface-container-low/70 px-3 py-2">
+          <div className="mt-2 rounded-lg border border-outline-variant/35 bg-surface-container-low/70 px-3 py-2">
             <div className="flex items-center justify-between gap-2">
               <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
                 <input
@@ -266,6 +296,51 @@ export default function RouteInfoPanel() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="relative mt-3">
+            <button
+              type="button"
+              onClick={() => setIsSaveMenuOpen((value) => !value)}
+              disabled={!hasSavableRoute}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary-container px-3 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(0,80,203,0.18)] transition-all hover:-translate-y-0.5 hover:bg-primary disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-primary-container/45 disabled:opacity-70"
+              aria-haspopup="menu"
+              aria-expanded={isSaveMenuOpen}
+            >
+              <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 3v10M8 9l4 4 4-4M5 21h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Save Route
+              <svg className={`h-4 w-4 shrink-0 transition-transform ${isSaveMenuOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            {isSaveMenuOpen && hasSavableRoute && (
+              <div
+                className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 overflow-hidden rounded-lg border border-outline-variant/45 bg-white shadow-[0_18px_34px_rgba(23,27,41,0.16)]"
+                role="menu"
+              >
+                <button
+                  type="button"
+                  onClick={() => handleSaveRoute('gpx')}
+                  className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-xs font-bold text-on-surface transition-colors hover:bg-surface-container-low"
+                  role="menuitem"
+                >
+                  <span>Download GPX</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-primary-container">Recommended</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSaveRoute('tcx')}
+                  className="flex w-full items-center justify-between gap-3 border-t border-outline-variant/30 px-3 py-2.5 text-left text-xs font-bold text-on-surface transition-colors hover:bg-surface-container-low"
+                  role="menuitem"
+                >
+                  <span>Download TCX</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-on-surface-variant">Garmin</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
