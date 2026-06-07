@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { nearestPointOnLine, length, lineSlice, point } from '@turf/turf';
 import type { Feature, LineString } from 'geojson';
 import toast from 'react-hot-toast';
@@ -16,6 +16,8 @@ export default function RouteInfoPanel() {
   const [activeWaypointId, setActiveWaypointId] = useState<string | null>(null);
   const [activeDockTool, setActiveDockTool] = useState<'ai' | 'planner' | null>(null);
   const [isSaveMenuOpen, setIsSaveMenuOpen] = useState(false);
+  const [isTipsOpen, setIsTipsOpen] = useState(false);
+  const tipsRef = useRef<HTMLDivElement | null>(null);
 
   const {
     waypoints,
@@ -170,15 +172,90 @@ export default function RouteInfoPanel() {
     ? 'Klik peta untuk mulai membuat rute.'
     : 'Drag marker untuk pindah titik, klik kanan marker untuk hapus.';
 
+  useEffect(() => {
+    if (!isTipsOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!tipsRef.current?.contains(event.target as Node)) {
+        setIsTipsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsTipsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isTipsOpen]);
+
   return (
     <div className="flex h-full w-full flex-col border-r border-outline-variant/40 bg-[rgba(250,252,255,0.9)] shadow-[18px_0_42px_rgba(23,27,41,0.08)] backdrop-blur-xl">
-      <div className="shrink-0 px-5 pb-2 pt-5">
-        <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-primary-container">
-          Route builder
-        </p>
-        <h1 className="mt-1 text-[24px] font-extrabold leading-7 tracking-normal text-on-surface">
-          Route Details
-        </h1>
+      <div className="relative z-20 shrink-0 px-5 pb-2 pt-5">
+        <div className="flex items-start justify-between gap-3 pr-12 lg:pr-0">
+          <div className="min-w-0">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-primary-container">
+              Route builder
+            </p>
+            <h1 className="mt-1 text-[24px] font-extrabold leading-7 tracking-normal text-on-surface">
+              Route Details
+            </h1>
+          </div>
+
+          <div ref={tipsRef} className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsTipsOpen((value) => !value)}
+              className={`grid h-10 w-10 place-items-center rounded-full border text-sm font-extrabold shadow-sm transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-container/20 ${
+                isTipsOpen
+                  ? 'border-primary-container bg-primary-container text-white'
+                  : 'border-outline-variant/45 bg-white/82 text-primary-container hover:bg-surface-container-low'
+              }`}
+              aria-label="Buka tips route builder"
+              aria-haspopup="dialog"
+              aria-expanded={isTipsOpen}
+            >
+              ?
+            </button>
+
+            {isTipsOpen && (
+              <div
+                className="absolute right-0 top-[calc(100%+8px)] z-30 w-[min(280px,calc(100vw-72px))] rounded-xl border border-outline-variant/45 bg-white p-3 shadow-[0_18px_38px_rgba(23,27,41,0.16)]"
+                role="dialog"
+                aria-label="Tips route builder"
+              >
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface-container text-primary-container">
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 17h.01M12 14a4 4 0 0 0 2-7.5 4 4 0 0 0-6 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-extrabold uppercase tracking-[0.1em] text-on-surface">
+                      Tips
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-on-surface-variant">
+                      {routeTip}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 space-y-2 border-t border-outline-variant/30 pt-3 text-xs leading-5 text-on-surface-variant">
+                  <p>Klik titik tengah untuk fokus ke waypoint.</p>
+                  <p>Gunakan split markers untuk mengecek ritme jarak per kilometer atau mil.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -497,11 +574,6 @@ export default function RouteInfoPanel() {
           />
         </div>
 
-        <div className="border-t border-outline-variant/35 px-5 py-3">
-        <p className="text-xs leading-5 text-on-surface-variant">
-          <strong className="font-bold text-on-surface">Tips:</strong> {routeTip}
-        </p>
-        </div>
       </div>
     </div>
   );
