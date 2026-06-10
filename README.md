@@ -23,6 +23,7 @@ Rancang rute lari sendiri di atas peta interaktif, lihat jarak dan profil elevas
     - [Running Route Builder untuk Pelari Modern](#running-route-builder-untuk-pelari-modern)
   - [Daftar Isi](#daftar-isi)
   - [Tentang Proyek](#tentang-proyek)
+    - [Cakupan Area](#cakupan-area)
   - [Fitur Unggulan](#fitur-unggulan)
   - [Quick Start](#quick-start)
     - [Prerequisites](#prerequisites)
@@ -50,7 +51,10 @@ Pelari sering kesulitan merencanakan rute baru, terutama di area asing. Tool yan
 
 User cukup mengeklik titik di peta. Rute otomatis *snap* ke jalan nyata lewat routing engine, jarak dan elevasi terhitung seketika, dan hasilnya bisa langsung diunduh ke perangkat GPS.
 
-> **Cakupan Area**: Saat ini MeRute baru mendukung wilayah **Surakarta Raya** (Solo dan sekitarnya), karena data routing GraphHopper masih terbatas pada area tersebut. Dukungan wilayah lain akan ditambahkan seiring perkembangan proyek.
+### Cakupan Area
+- Jawa Timur 
+- D.I. Yogyakarta
+- Jawa Tengah (Surakarta, Semarang, Magelang, Salatiga)
 
 ---
 
