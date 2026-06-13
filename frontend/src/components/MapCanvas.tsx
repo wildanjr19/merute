@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { circle as turfCircle } from '@turf/turf';
 import { useMapStore } from '../stores/mapStore';
 import { useRouteStore } from '../stores/routeStore';
 import { useRouteCalculate } from '../hooks/useRouteCalculate';
@@ -19,6 +20,12 @@ const MAP_STYLES = {
 
 // Overlay layers that should swallow map clicks (so clicking them never adds a waypoint).
 const OVERLAY_LAYER_IDS = ['split-markers-dot', 'hydration-markers'];
+const USER_LOCATION_SOURCE_ID = 'user-location-source';
+const USER_LOCATION_ACCURACY_SOURCE_ID = 'user-location-accuracy-source';
+const USER_LOCATION_ACCURACY_FILL_LAYER_ID = 'user-location-accuracy-fill';
+const USER_LOCATION_ACCURACY_OUTLINE_LAYER_ID = 'user-location-accuracy-outline';
+const USER_LOCATION_HALO_LAYER_ID = 'user-location-halo';
+const USER_LOCATION_DOT_LAYER_ID = 'user-location-dot';
 
 const getMarkerMeta = (index: number, total: number) => {
   if (index === 0) {
@@ -38,7 +45,7 @@ export default function MapCanvas() {
   const markers = useRef<Map<string, maplibregl.Marker>>(new Map());
 
 
-  const { center, zoom, style } = useMapStore();
+  const { center, zoom, style, userLocation } = useMapStore();
   const initialView = useRef({ center, zoom, style });
   const { waypoints, addWaypoint, updateWaypoint, removeWaypoint, segments } = useRouteStore();
 
@@ -153,6 +160,145 @@ export default function MapCanvas() {
       console.error('Error updating map style:', error);
     }
   }, [style, isMapLoaded]);
+
+  // Render current browser location, including the reported GPS accuracy radius.
+  useEffect(() => {
+    if (!map.current || !isMapLoaded) return;
+
+    const mapRef = map.current;
+    let isCancelled = false;
+
+    const removeLocationLayers = () => {
+      [
+        USER_LOCATION_DOT_LAYER_ID,
+        USER_LOCATION_HALO_LAYER_ID,
+        USER_LOCATION_ACCURACY_OUTLINE_LAYER_ID,
+        USER_LOCATION_ACCURACY_FILL_LAYER_ID,
+      ].forEach((layerId) => {
+        if (mapRef.getLayer(layerId)) {
+          mapRef.removeLayer(layerId);
+        }
+      });
+
+      [USER_LOCATION_SOURCE_ID, USER_LOCATION_ACCURACY_SOURCE_ID].forEach((sourceId) => {
+        if (mapRef.getSource(sourceId)) {
+          mapRef.removeSource(sourceId);
+        }
+      });
+    };
+
+    const upsertLocationLayers = () => {
+      if (isCancelled || !userLocation || !mapRef.isStyleLoaded()) return;
+
+      const pointFeature: GeoJSON.Feature<GeoJSON.Point> = {
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'Point',
+          coordinates: userLocation.center,
+        },
+      };
+      const accuracyFeature = turfCircle(userLocation.center, Math.max(userLocation.accuracy, 15) / 1000, {
+        steps: 64,
+        units: 'kilometers',
+      });
+
+      const locationSource = mapRef.getSource(USER_LOCATION_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+      if (locationSource) {
+        locationSource.setData(pointFeature);
+      } else {
+        mapRef.addSource(USER_LOCATION_SOURCE_ID, {
+          type: 'geojson',
+          data: pointFeature,
+        });
+      }
+
+      const accuracySource = mapRef.getSource(USER_LOCATION_ACCURACY_SOURCE_ID) as
+        | maplibregl.GeoJSONSource
+        | undefined;
+      if (accuracySource) {
+        accuracySource.setData(accuracyFeature);
+      } else {
+        mapRef.addSource(USER_LOCATION_ACCURACY_SOURCE_ID, {
+          type: 'geojson',
+          data: accuracyFeature,
+        });
+      }
+
+      if (!mapRef.getLayer(USER_LOCATION_ACCURACY_FILL_LAYER_ID)) {
+        mapRef.addLayer({
+          id: USER_LOCATION_ACCURACY_FILL_LAYER_ID,
+          type: 'fill',
+          source: USER_LOCATION_ACCURACY_SOURCE_ID,
+          paint: {
+            'fill-color': '#0050cb',
+            'fill-opacity': 0.12,
+          },
+        });
+      }
+
+      if (!mapRef.getLayer(USER_LOCATION_ACCURACY_OUTLINE_LAYER_ID)) {
+        mapRef.addLayer({
+          id: USER_LOCATION_ACCURACY_OUTLINE_LAYER_ID,
+          type: 'line',
+          source: USER_LOCATION_ACCURACY_SOURCE_ID,
+          paint: {
+            'line-color': '#0050cb',
+            'line-opacity': 0.28,
+            'line-width': 1.5,
+          },
+        });
+      }
+
+      if (!mapRef.getLayer(USER_LOCATION_HALO_LAYER_ID)) {
+        mapRef.addLayer({
+          id: USER_LOCATION_HALO_LAYER_ID,
+          type: 'circle',
+          source: USER_LOCATION_SOURCE_ID,
+          paint: {
+            'circle-color': '#ffffff',
+            'circle-radius': 10,
+            'circle-opacity': 0.95,
+            'circle-stroke-color': '#0050cb',
+            'circle-stroke-width': 2,
+          },
+        });
+      }
+
+      if (!mapRef.getLayer(USER_LOCATION_DOT_LAYER_ID)) {
+        mapRef.addLayer({
+          id: USER_LOCATION_DOT_LAYER_ID,
+          type: 'circle',
+          source: USER_LOCATION_SOURCE_ID,
+          paint: {
+            'circle-color': '#0050cb',
+            'circle-radius': 5,
+            'circle-stroke-color': '#ffffff',
+            'circle-stroke-width': 1,
+          },
+        });
+      }
+    };
+
+    if (!userLocation) {
+      removeLocationLayers();
+      return;
+    }
+
+    if (!mapRef.isStyleLoaded()) {
+      mapRef.once('styledata', upsertLocationLayers);
+      return () => {
+        isCancelled = true;
+        mapRef.off('styledata', upsertLocationLayers);
+      };
+    }
+
+    upsertLocationLayers();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [userLocation, isMapLoaded, style]);
 
   // Update markers when waypoints change
   useEffect(() => {
