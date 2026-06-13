@@ -67,6 +67,7 @@ User cukup mengeklik titik di peta. Rute otomatis *snap* ke jalan nyata lewat ro
 | ⛰️ | **Profil Elevasi** | Grafik elevasi interaktif (Recharts) sepanjang rute, lengkap dengan total elevation gain & loss. |
 | 💾 | **Export GPX / TCX** | Unduh rute langsung dari browser dalam format standar yang kompatibel Strava, Garmin, dan Wahoo. |
 | 🔍 | **Pencarian Lokasi** | Cari dan lompat ke lokasi mana pun lewat search bar terintegrasi. |
+| 📍 | **My Location** | Deteksi posisi user dari browser, lompat ke lokasi saat ini, dan tampilkan radius akurasi GPS di peta. |
 | ☀️ | **Smart Run Planner** | Rekomendasi jam mulai lari terbaik berdasarkan cuaca per jam, durasi rute, pace, elevasi, dan prioritas user. |
 | 💧 | **AI Hydration Points** | Rekomendasi titik hidrasi sepanjang rute (hybrid: rules baseline + AI enhancement). |
 | 📝 | **AI Cue Sheet** | Panduan teks natural per segmen rute, dibuat otomatis dengan fallback template. |

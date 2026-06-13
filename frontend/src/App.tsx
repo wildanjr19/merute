@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Toaster } from 'react-hot-toast';
+import { useCallback, useState } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 import MapCanvas from './components/MapCanvas';
 import RouteInfoPanel from './components/RouteInfoPanel';
 import LayerSwitcher from './components/LayerSwitcher';
@@ -11,12 +11,57 @@ import { useMapStore } from './stores/mapStore';
 
 function App() {
   const [isRoutePanelOpen, setIsRoutePanelOpen] = useState(false);
-  const { setCenter, setZoom } = useMapStore();
+  const [isLocating, setIsLocating] = useState(false);
+  const flyTo = useMapStore((state) => state.flyTo);
+  const setUserLocation = useMapStore((state) => state.setUserLocation);
 
   const handleSelectLocation = (lat: number, lng: number) => {
-    setCenter([lng, lat]); // MapLibre uses [lng, lat] format
-    setZoom(15);
+    flyTo([lng, lat], 15); // MapLibre uses [lng, lat] format
   };
+
+  const handleLocateUser = useCallback(() => {
+    if (isLocating) return;
+
+    if (!navigator.geolocation) {
+      toast.error('Browser tidak mendukung fitur lokasi');
+      return;
+    }
+
+    setIsLocating(true);
+    const toastId = toast.loading('Mencari lokasi Anda...');
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+        const center: [number, number] = [longitude, latitude];
+
+        setUserLocation({
+          center,
+          accuracy,
+          timestamp: position.timestamp,
+        });
+        flyTo(center, 16);
+        toast.success('Lokasi ditemukan', { id: toastId });
+        setIsLocating(false);
+      },
+      (error) => {
+        const message =
+          error.code === error.PERMISSION_DENIED
+            ? 'Izin lokasi ditolak oleh browser'
+            : error.code === error.TIMEOUT
+              ? 'Lokasi belum ditemukan, coba lagi'
+              : 'Lokasi tidak tersedia saat ini';
+
+        toast.error(message, { id: toastId });
+        setIsLocating(false);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 60_000,
+        timeout: 10_000,
+      },
+    );
+  }, [flyTo, isLocating, setUserLocation]);
 
   return (
     <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-surface text-on-surface">
@@ -40,7 +85,14 @@ function App() {
               <path d="m4 16 8 5 8-5" />
             </svg>
           </button>
-          <button className="header-icon-button" type="button" aria-label="Locate">
+          <button
+            className={`header-icon-button ${isLocating ? 'text-primary-container' : ''}`}
+            type="button"
+            aria-label={isLocating ? 'Locating current position' : 'Locate current position'}
+            title="Lokasi saya"
+            disabled={isLocating}
+            onClick={handleLocateUser}
+          >
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="4" />
               <path d="M12 2v3" />
